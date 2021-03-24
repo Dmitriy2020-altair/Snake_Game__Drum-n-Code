@@ -1,6 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import './App.css';
 import useInterval from './helper';
+// import StartButton from './components/Start_Button';
+
 import {
   CANVAS_SIZE,
   SNAKE_START,
@@ -16,14 +18,31 @@ const App = () => {
   const [snake, setSnake] = useState(SNAKE_START);
   const [apple, setApple] = useState(APPLE_START);
   const [dir, setDir] = useState([0, -1]);
-  const [speed, setSpeed] = useState(SPEED);
+  const [speed, setSpeed] = useState(null);
   const [gameOver, setGameOver] = useState(false);
+  const [score, setScore] = useState(0);
 
   useInterval(() => gameLoop(), speed);
 
-  const endGame = () => {
+  const startGame = () => {
+    setSnake(SNAKE_START);
+    setApple(APPLE_START);
+    setDir([0, -1]);
+    setSpeed(SPEED);
+    setGameOver(false);
+    setScore(0);
+  };
+
+  const overGame = () => {
     setSpeed(null);
     setGameOver(true);
+  };
+
+  const winGame = () => {
+    const winMessage = 'You won! Now you are real ANACONDA!';
+
+    alert(winMessage);
+    startGame();
   };
 
   const moveSnake = ({ keyCode }) => keyCode >= 37 && keyCode <= 40 && setDir(DIRECTIONS[keyCode]);
@@ -49,6 +68,7 @@ const App = () => {
       }
       setApple(newApple);
       setSpeed(() => speedUp);
+      setScore(() => score + 1);
       return true;
     }
     return false;
@@ -58,17 +78,10 @@ const App = () => {
     const snakeCopy = JSON.parse(JSON.stringify(snake));
     const newSnakeHead = [snakeCopy[0][0] + dir[0], snakeCopy[0][1] + dir[1]];
     snakeCopy.unshift(newSnakeHead);
-    if (checkCollision(newSnakeHead)) endGame();
+    if (checkCollision(newSnakeHead)) overGame();
     if (!checkAppleCollision(snakeCopy)) snakeCopy.pop();
     setSnake(snakeCopy);
-  };
-
-  const startGame = () => {
-    setSnake(SNAKE_START);
-    setApple(APPLE_START);
-    setDir([0, -1]);
-    setSpeed(SPEED);
-    setGameOver(false);
+    if (score === 3) winGame();
   };
 
   useEffect(() => {
@@ -77,7 +90,7 @@ const App = () => {
     context.clearRect(0, 0, window.innerWidth, window.innerHeight);
     context.fillStyle = 'green';
     snake.forEach(([x, y]) => context.fillRect(x, y, 1, 1));
-    context.fillStyle = 'lightblue';
+    context.fillStyle = 'red';
     context.fillRect(apple[0], apple[1], 1, 1);
   }, [snake, apple, gameOver]);
 
@@ -91,6 +104,7 @@ const App = () => {
       />
       {gameOver && <div>GAME OVER!</div>}
       <button onClick={startGame}>Start Game</button>
+      <div>{ `Score: ${score}` }</div>
     </div>
   );
 };
