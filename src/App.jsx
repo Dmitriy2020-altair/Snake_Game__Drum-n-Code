@@ -1,110 +1,172 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, {
+  useRef, useEffect, useReducer, useCallback,
+} from 'react';
 import './App.css';
-import useInterval from './helper';
-// import StartButton from './components/Start_Button';
-
+import useInterval from './utils/helper';
 import {
   CANVAS_SIZE,
-  SNAKE_START,
-  APPLE_START,
   SCALE,
-  SPEED,
-  DIRECTIONS,
-  SPEED_UP,
+  DIRECTION,
 } from './constants';
+import gameReducer, { gameInitialState } from './reducer/GameReducer';
+import {
+  changeSnakeDirection, overGame, snakeEatingApple, snakeGrowing, startGame, pauseGame, resumeGame,
+} from './actions';
+import createApple from './utils/createApple';
+import checkCollision from './utils/checkCollision';
 
 const App = () => {
   const canvasRef = useRef();
-  const [snake, setSnake] = useState(SNAKE_START);
-  const [apple, setApple] = useState(APPLE_START);
-  const [dir, setDir] = useState([0, -1]);
-  const [speed, setSpeed] = useState(null);
-  const [gameOver, setGameOver] = useState(false);
-  const [score, setScore] = useState(0);
 
-  useInterval(() => gameLoop(), speed);
+  const [state, dispatch] = useReducer(gameReducer, gameInitialState);
 
-  const startGame = () => {
-    setSnake(SNAKE_START);
-    setApple(APPLE_START);
-    setDir([0, -1]);
-    setSpeed(SPEED);
-    setGameOver(false);
-    setScore(0);
-  };
+  const {
+    snake,
+    score,
+    applePosition,
+    gameIsOver,
+    gameIsPaused,
+    gameIsRunning,
+    topScore,
+  } = state;
 
-  const overGame = () => {
-    setSpeed(null);
-    setGameOver(true);
-  };
+  const dispatchStartGame = useCallback(() => {
+    dispatch(startGame());
+  }, []);
 
-  const winGame = () => {
-    const winMessage = 'You won! Now you are real ANACONDA!';
+  useInterval(() => gameLoop(), snake.speed);
 
-    alert(winMessage);
-    startGame();
-  };
+  const winGame = useCallback(() => {
+    alert('You won! Now you are real ANACONDA!');
+    dispatch(startGame());
+  }, []);
 
-  const moveSnake = ({ keyCode }) => keyCode >= 37 && keyCode <= 40 && setDir(DIRECTIONS[keyCode]);
+  const moveSnake = useCallback(({ keyCode }) => {
+    if (keyCode === 32) return gameIsPaused ? dispatch(resumeGame()) : dispatch(pauseGame());
 
-  const createApple = () => apple.map((_a, i) => Math.floor(Math.random() * (CANVAS_SIZE[i] / SCALE)));
+    if (gameIsPaused) return;
 
-  const checkCollision = (piece, snk = snake) => {
-    if (piece[0] * SCALE >= CANVAS_SIZE[0] || piece[0] < 0 || piece[1] * SCALE >= CANVAS_SIZE[1] || piece[1] < 0) return true;
+    if (!(keyCode >= 37 && keyCode <= 40)) return;
 
-    for (const segment of snk) {
-      if (piece[0] === segment[0] && piece[1] === segment[1]) return true;
-    }
-    return false;
-  };
+    const {
+      up, down, left, right,
+    } = DIRECTION;
+    let newDirection;
 
-  const checkAppleCollision = (newSnake) => {
-    if (newSnake[0][0] === apple[0] && newSnake[0][1] === apple[1]) {
-      let newApple = createApple();
-      let speedUp = speed - SPEED_UP;
+    if (keyCode === 38) newDirection = up;
+    else if (keyCode === 40) newDirection = down;
+    else if (keyCode === 37) newDirection = left;
+    else newDirection = right;
 
-      while (checkCollision(newApple, newSnake)) {
-        newApple = createApple();
+    if ((newDirection === up || newDirection === down) && (snake.direction === up || snake.direction === down)) return;
+
+    if ((newDirection === right || newDirection === left) && (snake.direction === right || snake.direction === left)) return;
+
+    dispatch(changeSnakeDirection(newDirection));
+  }, [snake.direction, gameIsPaused]);
+
+  const checkAppleCollision = (newSnakePosition) => {
+    if (newSnakePosition[0].x === applePosition.x && newSnakePosition[0].y === applePosition.y) {
+      let newApplePosition = createApple();
+
+      while (checkCollision(newApplePosition, newSnakePosition)) {
+        newApplePosition = createApple();
       }
-      setApple(newApple);
-      setSpeed(() => speedUp);
-      setScore(() => score + 1);
+
+      dispatch(snakeEatingApple(newApplePosition));
+
       return true;
     }
     return false;
   };
 
   const gameLoop = () => {
-    const snakeCopy = JSON.parse(JSON.stringify(snake));
-    const newSnakeHead = [snakeCopy[0][0] + dir[0], snakeCopy[0][1] + dir[1]];
-    snakeCopy.unshift(newSnakeHead);
-    if (checkCollision(newSnakeHead)) overGame();
-    if (!checkAppleCollision(snakeCopy)) snakeCopy.pop();
-    setSnake(snakeCopy);
-    if (score === 3) winGame();
+    const copySnakePosition = [...snake.position];
+    const newSnakeHead = {
+      x: copySnakePosition[0].x + snake.direction.x,
+      y: copySnakePosition[0].y + snake.direction.y,
+    };
+
+    copySnakePosition.unshift(newSnakeHead);
+
+    if (checkCollision(newSnakeHead, snake.position)) dispatch(overGame());
+
+    if (!checkAppleCollision(copySnakePosition)) copySnakePosition.pop();
+
+    dispatch(snakeGrowing(copySnakePosition));
+
+    if (score === 50) winGame();
   };
+
+  const dispatchPauseGame = useCallback(() => {
+    dispatch(pauseGame());
+  }, []);
+
+  const dispatchResumeGame = useCallback(() => {
+    dispatch(resumeGame());
+  }, []);
+
+  useEffect(() => {
+    if (gameIsRunning) canvasRef.current.focus();
+  }, [gameIsRunning, gameIsPaused]);
 
   useEffect(() => {
     const context = canvasRef.current.getContext('2d');
     context.setTransform(SCALE, 0, 0, SCALE, 0, 0);
     context.clearRect(0, 0, window.innerWidth, window.innerHeight);
     context.fillStyle = 'green';
-    snake.forEach(([x, y]) => context.fillRect(x, y, 1, 1));
+    snake.position.forEach(({ x, y }) => context.fillRect(x, y, 1, 1));
     context.fillStyle = 'red';
-    context.fillRect(apple[0], apple[1], 1, 1);
-  }, [snake, apple, gameOver]);
+    context.fillRect(applePosition.x, applePosition.y, 1, 1);
+  }, [snake.position, applePosition.x, applePosition.y, gameIsOver]);
 
   return (
-    <div role="button" tabIndex="0" onKeyDown={(e) => moveSnake(e)}>
+    <div>
+      {gameIsOver && <div>GAME OVER!</div>}
       <canvas
-        style={{ border: '1px solid black' }}
+        tabIndex={0}
+        onKeyDown={moveSnake}
+        style={{
+          border: '1px solid black',
+          opacity: gameIsRunning ? 1 : 0,
+        }}
         ref={canvasRef}
-        width={`${CANVAS_SIZE[0]}px`}
-        height={`${CANVAS_SIZE[1]}px`}
+        width={`${CANVAS_SIZE.width}px`}
+        height={`${CANVAS_SIZE.height}px`}
       />
-      {gameOver && <div>GAME OVER!</div>}
-      <button onClick={startGame}>Start Game</button>
-      <div>{ `Score: ${score}` }</div>
+      {gameIsRunning ? (
+        <>
+          <div>
+            Score:
+            {' '}
+            {score}
+          </div>
+          <button
+            onClick={gameIsPaused ? dispatchResumeGame : dispatchPauseGame}
+          >
+            {gameIsPaused ? 'Resume' : 'Pause'}
+          </button>
+        </>
+      ) : (
+        <button onClick={dispatchStartGame}>Start Game</button>
+      )}
+      <div>
+        Top score:
+        {' '}
+        { topScore }
+      </div>
+      <div style={{
+        fontSize: '20px',
+        fontWeight: 'bold',
+        margin: '5px',
+      }}
+      >
+        Keyboard&apos;s arrows - snake manipulation
+        <br />
+        Space button is PAUSE and RESUME
+        <br />
+        To win Game have to get 50 apples
+      </div>
     </div>
   );
 };
