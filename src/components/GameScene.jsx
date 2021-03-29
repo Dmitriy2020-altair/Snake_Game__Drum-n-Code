@@ -1,7 +1,9 @@
 import { useEffect, useRef } from 'react';
 import { CANVAS_SIZE, SCALE } from '../constants';
 
-const GameScene = ({ applePosition, snake, gameIsOver }) => {
+const GameScene = ({
+  applePosition, snake, gameIsOver, children,
+}) => {
   const canvasRef = useRef(null);
 
   useEffect(() => {
@@ -15,13 +17,14 @@ const GameScene = ({ applePosition, snake, gameIsOver }) => {
   }, [snake.position, applePosition.x, applePosition.y, gameIsOver]);
 
   return (
-    <div className="paper">
+    <div className="paper game-scene">
       <canvas
         ref={canvasRef}
-        className="game-scene"
+        className="game-scene__canvas"
         width={`${CANVAS_SIZE.width}px`}
         height={`${CANVAS_SIZE.height}px`}
       />
+      {children}
     </div>
   );
 };

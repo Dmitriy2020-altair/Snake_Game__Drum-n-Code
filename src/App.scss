@@ -21,9 +21,13 @@ body {
 }
 
 .game-scene {
-  border: 2px solid grey;
-  border-radius: $border-radius;
+  display: flex;
+  &__canvas {
+    border: 2px solid grey;
+    border-radius: $border-radius;
+  }
 }
+
 
 .btn {
   font-family: $font-family;
@@ -104,4 +108,10 @@ body {
     font-family: $font-family;
     letter-spacing: $letter-spacing;
   }
+}
+
+.score-board {
+  display: flex;
+  flex-direction: column;
+  margin-left: $spacing;
 }

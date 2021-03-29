@@ -39,6 +39,17 @@ const gameReducer = createReducer({
     changeSnakeDirection(state, payload) {
       const newSnakeDirection = payload;
 
+      const {
+        up, down, left, right,
+      } = DIRECTION;
+
+      if (
+        (newSnakeDirection === up && state.snake.direction === down)
+        || (newSnakeDirection === down && state.snake.direction === up)
+        || (newSnakeDirection === left && state.snake.direction === right)
+        || (newSnakeDirection === right && state.snake.direction === left)
+      ) state.snake.position.reverse();
+
       state.snake.direction = newSnakeDirection;
     },
 

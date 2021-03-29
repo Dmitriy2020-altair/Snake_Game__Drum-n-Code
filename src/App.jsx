@@ -22,19 +22,22 @@ const App = () => {
     topScore,
   } = state;
 
-  const dispatchStartGame = useCallback(() => {
+  const dispatchStartGame = () => {
     dispatch(startGame());
-  }, []);
+  };
+
+  const dispatchPauseGame = () => {
+    dispatch(pausedGame());
+  };
 
   useInterval(() => gameLoop(), (gameIsPaused || !gameIsRunning) ? null : snake.speed);
 
-  const winGame = useCallback(() => {
+  const winGame = () => {
     alert('You won! Now you are real ANACONDA!');
     dispatch(startGame());
-  }, []);
+  };
 
   const moveSnake = useCallback(({ keyCode }) => {
-    console.log('Hello sanek');
     if (keyCode === 32) return gameIsPaused ? dispatch(resumeGame()) : dispatch(pausedGame());
 
     if (gameIsPaused) return;
@@ -51,12 +54,8 @@ const App = () => {
     else if (keyCode === 37) newDirection = left;
     else newDirection = right;
 
-    if ((newDirection === up || newDirection === down) && (snake.direction === up || snake.direction === down)) return;
-
-    if ((newDirection === right || newDirection === left) && (snake.direction === right || snake.direction === left)) return;
-
     dispatch(changeSnakeDirection(newDirection));
-  }, [snake.direction, gameIsPaused]);
+  }, [gameIsPaused]);
 
   const checkAppleCollision = (newSnakePosition) => {
     if (newSnakePosition[0].x === applePosition.x && newSnakePosition[0].y === applePosition.y) {
@@ -91,13 +90,9 @@ const App = () => {
     if (score === 50) winGame();
   };
 
-  const dispatchPauseGame = useCallback(() => {
-    dispatch(pausedGame());
-  }, []);
-
-  const dispatchResumeGame = useCallback(() => {
+  const dispatchResumeGame = () => {
     dispatch(resumeGame());
-  }, []);
+  };
 
   useEffect(() => {
     if (gameIsRunning) document.addEventListener('keydown', moveSnake);
@@ -112,40 +107,40 @@ const App = () => {
         applePosition={applePosition}
         snake={snake}
         gameIsOver={gameIsOver}
-      />
-      {gameIsRunning ? (
-        <>
-          <div>
+      >
+        <div className="score-board">
+          <div className="typography h3">
             Score:
-            {' '}
             {score}
           </div>
-          <button
-            onClick={gameIsPaused ? dispatchResumeGame : dispatchPauseGame}
-          >
-            {gameIsPaused ? 'Resume' : 'Pause'}
-          </button>
-        </>
-      ) : (
-        <button onClick={dispatchStartGame}>Start Game</button>
-      )}
-      <div>
-        Top score:
-        {' '}
-        { topScore }
-      </div>
-      <div style={{
-        fontSize: '20px',
-        fontWeight: 'bold',
-        margin: '5px',
-      }}
-      >
-        Keyboard&apos;s arrows - snake manipulation
-        <br />
-        Space button is PAUSE and RESUME
-        <br />
-        To win Game have to get 50 apples
-      </div>
+          <div className="typography h3">
+            Top score:
+            {topScore}
+          </div>
+          <p className="typography h6">
+            Keyboard&apos;s arrows - snake manipulation
+            <br />
+            Enter button is PAUSE and RESUME
+            <br />
+            To win Game have to get 50 apples
+          </p>
+          {gameIsRunning ? (
+            <button
+              className="btn"
+              onClick={gameIsPaused ? dispatchResumeGame : dispatchPauseGame}
+            >
+              { gameIsPaused ? 'Resume' : 'Pause'}
+            </button>
+          ) : (
+            <button
+              className="btn"
+              onClick={dispatchStartGame}
+            >
+              Start Game
+            </button>
+          )}
+        </div>
+      </GameScene>
     </div>
   );
 };
