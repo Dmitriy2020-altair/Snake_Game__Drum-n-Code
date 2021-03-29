@@ -1,17 +1,16 @@
 import {
-  DIRECTION, SNAKE_INITIAL_POSITION, SPEED_UP, SNAKE_INITIAL_SPEED,
+  DIRECTION, SNAKE_INITIAL_POSITION, SPEED_UP, SNAKE_INITIAL_SPEED, APPLE_START,
 } from '../constants';
+import createReducer from '../utils/createReducer';
 
-let currentSpeedSnake = null;
-
-export const gameInitialState = {
+const gameInitialState = {
   snake: {
-    speed: null,
+    speed: SNAKE_INITIAL_SPEED,
     direction: DIRECTION.up,
     position: SNAKE_INITIAL_POSITION,
   },
 
-  applePosition: { x: 8, y: 3 },
+  applePosition: APPLE_START,
   score: 0,
   gameIsPaused: false,
   gameIsRunning: false,
@@ -19,102 +18,67 @@ export const gameInitialState = {
   topScore: Number(localStorage.getItem('topScore')) ?? 0,
 };
 
-export default function gameReducer(state, { type, payload = null }) {
-  console.log(type, payload);
+const gameReducer = createReducer({
+  name: 'game',
 
-  switch (type) {
-    case 'START_GAME': {
-      return {
-        ...gameInitialState,
-        gameIsRunning: true,
-        snake: {
-          ...gameInitialState.snake,
-          speed: SNAKE_INITIAL_SPEED,
-        },
-        topScore: Number(localStorage.getItem('topScore')) ?? 0,
-      };
-    }
+  initialState: gameInitialState,
 
-    case 'OVER_GAME': {
-      return {
-        ...state,
-        gameIsRunning: false,
-        gameIsOver: true,
-        snake: {
-          ...state.snake,
-          speed: null,
-        },
-      };
-    }
+  reducers: {
+    startGame: () => ({
+      ...gameInitialState,
+      snake: { ...gameInitialState.snake },
+      gameIsRunning: true,
+      topScore: Number(localStorage.getItem('topScore')) ?? 0,
+    }),
 
-    case 'CHANGE_SNAKE_DIRECTION': {
+    overGame(state) {
+      state.gameIsRunning = false;
+      state.gameIsOver = true;
+    },
+
+    changeSnakeDirection(state, payload) {
       const newSnakeDirection = payload;
 
-      return {
-        ...state,
-        snake: {
-          ...state.snake,
-          direction: newSnakeDirection,
-        },
-      };
-    }
+      state.snake.direction = newSnakeDirection;
+    },
 
-    case 'SNAKE_EATING_APPLE': {
+    snakeEatingApple(state, payload) {
       const newApplePosition = payload;
       const newScore = state.score + 1;
       const newTopScore = Math.max(newScore, state.topScore);
       localStorage.setItem('topScore', newTopScore);
 
-      return {
-        ...state,
-        applePosition: newApplePosition,
-        score: newScore,
-        snake: {
-          ...state.snake,
-          speed: state.snake.speed - SPEED_UP,
-        },
-        topScore: newTopScore,
-      };
-    }
+      state.applePosition = newApplePosition;
+      state.score = newScore;
+      state.snake.speed -= SPEED_UP;
+      state.topScore = newTopScore;
+    },
 
-    case 'SNAKE_GROWING': {
+    snakeGrowing(state, payload) {
       const newSnakePosition = payload;
 
-      return {
-        ...state,
-        snake: {
-          ...state.snake,
-          position: newSnakePosition,
-        },
-      };
-    }
+      state.snake.position = newSnakePosition;
+    },
 
-    case 'PAUSE_GAME': {
-      currentSpeedSnake = state.snake.speed;
+    pausedGame(state) {
+      state.gameIsPaused = true;
+    },
 
-      return {
-        ...state,
-        snake: {
-          ...state.snake,
-          speed: null,
-        },
-        gameIsPaused: true,
-      };
-    }
+    resumeGame(state) {
+      state.gameIsPaused = false;
+    },
 
-    case 'RESUME_GAME': {
-      return {
-        ...state,
-        snake: {
-          ...state.snake,
-          speed: currentSpeedSnake,
-        },
+  },
+});
 
-        gameIsPaused: false,
-      };
-    }
+export default gameReducer;
 
-    default:
-      return state;
-  }
-}
+export const {
+  startGame,
+  overGame,
+  changeSnakeDirection,
+  snakeEatingApple,
+  snakeGrowing,
+  pausedGame,
+  resumeGame,
+} = gameReducer.actions;

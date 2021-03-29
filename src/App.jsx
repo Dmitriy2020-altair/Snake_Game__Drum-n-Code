@@ -1,24 +1,16 @@
-import React, {
-  useRef, useEffect, useReducer, useCallback,
-} from 'react';
-import './App.css';
-import useInterval from './utils/helper';
-import {
-  CANVAS_SIZE,
-  SCALE,
-  DIRECTION,
-} from './constants';
-import gameReducer, { gameInitialState } from './reducer/GameReducer';
-import {
-  changeSnakeDirection, overGame, snakeEatingApple, snakeGrowing, startGame, pauseGame, resumeGame,
-} from './actions';
+import React, { useEffect, useReducer, useCallback } from 'react';
+import './App.scss';
+import useInterval from './utils/useInterval';
+import { DIRECTION } from './constants';
+import gameReducer, {
+  changeSnakeDirection, overGame, snakeEatingApple, snakeGrowing, startGame, pausedGame, resumeGame,
+} from './reducer/GameReducer';
 import createApple from './utils/createApple';
 import checkCollision from './utils/checkCollision';
+import GameScene from './components/GameScene';
 
 const App = () => {
-  const canvasRef = useRef();
-
-  const [state, dispatch] = useReducer(gameReducer, gameInitialState);
+  const [state, dispatch] = useReducer(gameReducer, gameReducer.initialState);
 
   const {
     snake,
@@ -34,7 +26,7 @@ const App = () => {
     dispatch(startGame());
   }, []);
 
-  useInterval(() => gameLoop(), snake.speed);
+  useInterval(() => gameLoop(), (gameIsPaused || !gameIsRunning) ? null : snake.speed);
 
   const winGame = useCallback(() => {
     alert('You won! Now you are real ANACONDA!');
@@ -42,7 +34,8 @@ const App = () => {
   }, []);
 
   const moveSnake = useCallback(({ keyCode }) => {
-    if (keyCode === 32) return gameIsPaused ? dispatch(resumeGame()) : dispatch(pauseGame());
+    console.log('Hello sanek');
+    if (keyCode === 32) return gameIsPaused ? dispatch(resumeGame()) : dispatch(pausedGame());
 
     if (gameIsPaused) return;
 
@@ -99,7 +92,7 @@ const App = () => {
   };
 
   const dispatchPauseGame = useCallback(() => {
-    dispatch(pauseGame());
+    dispatch(pausedGame());
   }, []);
 
   const dispatchResumeGame = useCallback(() => {
@@ -107,32 +100,18 @@ const App = () => {
   }, []);
 
   useEffect(() => {
-    if (gameIsRunning) canvasRef.current.focus();
-  }, [gameIsRunning, gameIsPaused]);
+    if (gameIsRunning) document.addEventListener('keydown', moveSnake);
 
-  useEffect(() => {
-    const context = canvasRef.current.getContext('2d');
-    context.setTransform(SCALE, 0, 0, SCALE, 0, 0);
-    context.clearRect(0, 0, window.innerWidth, window.innerHeight);
-    context.fillStyle = 'green';
-    snake.position.forEach(({ x, y }) => context.fillRect(x, y, 1, 1));
-    context.fillStyle = 'red';
-    context.fillRect(applePosition.x, applePosition.y, 1, 1);
-  }, [snake.position, applePosition.x, applePosition.y, gameIsOver]);
+    return () => document.removeEventListener('keydown', moveSnake);
+  }, [gameIsRunning, moveSnake]);
 
   return (
     <div>
       {gameIsOver && <div>GAME OVER!</div>}
-      <canvas
-        tabIndex={0}
-        onKeyDown={moveSnake}
-        style={{
-          border: '1px solid black',
-          opacity: gameIsRunning ? 1 : 0,
-        }}
-        ref={canvasRef}
-        width={`${CANVAS_SIZE.width}px`}
-        height={`${CANVAS_SIZE.height}px`}
+      <GameScene
+        applePosition={applePosition}
+        snake={snake}
+        gameIsOver={gameIsOver}
       />
       {gameIsRunning ? (
         <>

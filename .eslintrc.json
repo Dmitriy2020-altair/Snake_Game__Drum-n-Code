@@ -18,6 +18,8 @@
 		"no-use-before-define": "off",
 		"no-alert": "off",
 		"no-fallthrough": "off",
-		"no-param-reassign": "off"
+		"no-param-reassign": "off",
+		"import/prefer-default-export": "off",
+		"react/react-in-jsx-scope": "off"
 	}
 }
